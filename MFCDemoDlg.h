@@ -91,4 +91,9 @@ public:
 	CChartCtrl pChartCtrlPos;
 	CChartCtrl pChartCtrlVel;
 	CChartCtrl pChartCtrlAcc;
+	VOID DrawPIDGraph();
+	VOID ProcessData(unsigned char* data, int inLength);
+	VOID DrawOperationGraph();
+	CChartLineSerie* pChartPosSeries;
+	CChartLineSerie* pChartPosSeriesRef;
 };

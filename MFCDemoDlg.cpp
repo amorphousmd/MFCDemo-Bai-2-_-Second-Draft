@@ -53,6 +53,116 @@ int nLenGraphPID;
 double dPIDPlotData[1000] = {};
 double dPIDPlotTime[1000] = {};
 
+double fPositionPlotData[1000] = {};
+float fVelPlotData[1000] = {};
+float fAccPlotData[1000] = {};
+int nLenGraphOperation;
+int nLengtPositionPlotData = 0;
+
+VOID CMFCDemoDlg::DrawPIDGraph() {
+	pChartPIDSeries->ClearSerie();
+	for (int i = 0; i < nLenGraphPID; i++) {
+		pChartPIDSeries->AddPoint(dPIDPlotTime[i], dPIDPlotData[i]);
+	}
+}
+
+VOID CMFCDemoDlg::ProcessData(unsigned char* data, int inLength) {
+	//CString Cmd;
+	//STX CMD OPTION DATA ACK
+	//8 9 10 11 12 13 14 15
+	CString str;
+	uint16_t nIndex = 0;
+	uint16_t nPosition = 0;
+	CString csCmd, csOption, csData;
+	for (UINT i = 0; i < static_cast<UINT>(inLength); i++) {
+		bProtocolDataBuffer[i] = static_cast<BYTE>(data[i]);
+	}
+	for (UINT i = 1; i <= 4; i++) {
+		csCmd.AppendChar(static_cast<char>(bProtocolDataBuffer[i]));
+	}
+	for (UINT i = 5; i <= 7; i++) {
+		bProtocolOption[i - 5] = bProtocolDataBuffer[i];
+	}
+	for (UINT i = 8; i <= 15; i++) {
+		bProtocolData[i - 8] = bProtocolDataBuffer[i];
+	}
+
+	if (!csCmd.Compare(static_cast<CString>("SPID"))) {
+
+	}
+	if (!csCmd.Compare(static_cast<CString>("GPID"))) {
+		//m_btnREQ
+		nLenGraphPID = (bProtocolData[0] << 8) + bProtocolData[1];
+		//TODO:
+		nIndex = (bProtocolData[2] << 8) + bProtocolData[3];
+		nPosition = (bProtocolData[6] << 8) + bProtocolData[7];
+		dPIDPlotData[nIndex] = nPosition;
+		if (nIndex == (bProtocolData[0] << 8) + bProtocolData[1]) {
+			DrawPIDGraph();
+		}
+	}
+	if (!csCmd.Compare(static_cast<CString>("CTUN"))) {
+		if (bProtocolDataBuffer[16] == 0x06) {
+			//Receive SPID OK
+		}
+	}
+	if (!csCmd.Compare(static_cast<CString>("CRUN"))) {
+		if (bProtocolDataBuffer[16] == 0x06) {
+			//Receive SPID OK
+		}
+	}
+
+	if (!csCmd.Compare(static_cast<CString>("GRMS"))) {
+		if (bProtocolDataBuffer[16] == 0x06) {
+			//Receive SPID OK
+		}
+	}
+	if (!csCmd.Compare(static_cast<CString>("CSET"))) {
+		if (bProtocolDataBuffer[16] == 0x06) {
+			//Receive SPID OK
+		}
+	}
+	if (!csCmd.Compare(static_cast<CString>("GRMS"))) {
+		//if (bProtocolBuffer[16] == 0x06) {
+			//Receive SPID OK
+		nLengtPositionPlotData = (bProtocolData[0] << 8) + bProtocolData[1];
+		//if ((bProtocolData[2] << 8) + bProtocolData[3] >= nLengtPositionPlotData) return;
+		nIndex = (bProtocolData[2] << 8) + bProtocolData[3];
+		nPosition = (bProtocolData[6] << 8) + bProtocolData[7];
+
+		fPositionPlotData[nIndex] = nPosition;
+
+		if (nLengtPositionPlotData == nIndex) {
+			/*DrawOperationGraph();*/
+			uint16_t nRms = (bProtocolData[4] << 8) + bProtocolData[5];
+
+			str.Format(static_cast<CString>("%d "), nRms);
+
+			m_stRms.SetWindowText(str);
+		}
+		//}
+	}
+
+}
+
+VOID CMFCDemoDlg::DrawOperationGraph() {
+	pChartPosSeriesRef = pChartCtrlPos.CreateLineSerie();
+	pChartPosSeriesRef->SetColor(RGB(255, 0, 0));
+	pChartPosSeries->SetWidth(3); //line width
+	pChartPosSeriesRef->ClearSerie();
+
+	for (int i = 0; i < nLengtPositionPlotData; i++) {
+		pChartPosSeriesRef->AddPoint(dPIDPlotTime[i], fPositionPlotData[i]);
+	}
+	//pChartVelSeries->ClearSerie();
+	//for (int i = 0; i < nLenGraphOperation; i++) {
+	//	pChartVelSeries->AddPoint(fPIDPlotTime[i], fVelPlotData[i]);
+	//}
+	//pChartAccSeries->ClearSerie();
+	//for (int i = 0; i < nLenGraphOperation; i++) {
+	//	pChartAccSeries->AddPoint(fPIDPlotTime[i], fAccPlotData[i]);
+	//}
+}
 
 // CAboutDlg dialog used for App About
 void FloatToByteArray(double dNumber, BYTE bOut[], uint8_t* nLengthTithes)
