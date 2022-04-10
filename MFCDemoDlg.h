@@ -6,6 +6,7 @@
 #include "SerialCtrl.h"
 #include "afxwin.h"
 #include "ChartCtrl.h"
+#include "Motion/MotionGenerator.h"
 // CMFCDemoDlg dialog
 
 class CMFCDemoDlg : public CDialogEx, public CSerialIO
@@ -94,6 +95,14 @@ public:
 	VOID DrawPIDGraph();
 	VOID ProcessData(unsigned char* data, int inLength);
 	VOID DrawOperationGraph();
+	afx_msg void OnBnClickedButtonDraw();
+	double GetDlgItemDouble(int nID);
+
 	CChartLineSerie* pChartPosSeries;
+	CChartLineSerie* pChartVelSeries;
+	CChartLineSerie* pChartAccSeries;
 	CChartLineSerie* pChartPosSeriesRef;
+	afx_msg void OnBnClickedButtonSendpos();
+	afx_msg void OnBnClickedButtonOprun();
+	afx_msg void OnBnClickedButtonGetRms();
 };

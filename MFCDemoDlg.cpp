@@ -9,6 +9,18 @@
 #include "ChartCtrl.h"
 #include "ChartAxisLabel.h"
 #include "ChartLineSerie.h"
+#include <winnt.h>
+#include <vector>
+#include <cstddef>
+#include <windef.h>
+#include <cstringt.h>
+#include <afxstr.h>
+#include <atlsimpstr.h>
+#include <tchar.h>
+#include "Motion/MotionGenerator.h"
+#include "ChartCtrl/ChartAxisLabel.h"
+#include "ChartCtrl/ChartString.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -140,7 +152,6 @@ VOID CMFCDemoDlg::ProcessData(unsigned char* data, int inLength) {
 
 			m_stRms.SetWindowText(str);
 		}
-		//}
 	}
 
 }
@@ -154,14 +165,22 @@ VOID CMFCDemoDlg::DrawOperationGraph() {
 	for (int i = 0; i < nLengtPositionPlotData; i++) {
 		pChartPosSeriesRef->AddPoint(dPIDPlotTime[i], fPositionPlotData[i]);
 	}
-	//pChartVelSeries->ClearSerie();
-	//for (int i = 0; i < nLenGraphOperation; i++) {
-	//	pChartVelSeries->AddPoint(fPIDPlotTime[i], fVelPlotData[i]);
-	//}
-	//pChartAccSeries->ClearSerie();
-	//for (int i = 0; i < nLenGraphOperation; i++) {
-	//	pChartAccSeries->AddPoint(fPIDPlotTime[i], fAccPlotData[i]);
-	//}
+	pChartVelSeries->ClearSerie();
+	for (int i = 0; i < nLenGraphOperation; i++) {
+		pChartVelSeries->AddPoint(dPIDPlotTime[i], fVelPlotData[i]);
+	}
+	pChartAccSeries->ClearSerie();
+	for (int i = 0; i < nLenGraphOperation; i++) {
+		pChartAccSeries->AddPoint(dPIDPlotTime[i], fAccPlotData[i]);
+	}
+}
+
+double CMFCDemoDlg::GetDlgItemDouble(int nID) // Need testing
+{
+	CString sTemp;
+	GetDlgItem(nID)->GetWindowText(sTemp);
+	double dRet = _tstof(static_cast<LPCTSTR>(sTemp));
+	return dRet;
 }
 
 // CAboutDlg dialog used for App About
@@ -169,11 +188,11 @@ void FloatToByteArray(double dNumber, BYTE bOut[], uint8_t* nLengthTithes)
 {
 	uint8_t nCountTithes = 0;
 	bOut[0] = (BYTE)dNumber;
-	float nTithes = (float)(dNumber - bOut[0]);
+	float  nTithes = (float)(dNumber - bOut[0]);
 	do
 	{
 		nTithes *= 10;
-		if (nCountTithes >> 3) break; // Xem lai cho nay
+		if (nCountTithes++ >> 3) break;
 
 	} while (nTithes <= 1);
 	*nLengthTithes = nCountTithes;
@@ -183,7 +202,7 @@ void FloatToByteArray(double dNumber, BYTE bOut[], uint8_t* nLengthTithes)
 void FloatToByteArrayWithNipes(double fNumber, BYTE bOut[], uint8_t* nLengthTithes) {
 	uint8_t nCountTithes = 5;
 	bOut[0] = (BYTE)fNumber;
-	double nTithes = (double)(fNumber - bOut[0]);
+	double  nTithes = (double)(fNumber - bOut[0]);
 
 	nTithes = nTithes * pow(10, nCountTithes);
 	while (nTithes > 255) {
@@ -192,7 +211,6 @@ void FloatToByteArrayWithNipes(double fNumber, BYTE bOut[], uint8_t* nLengthTith
 	}
 	*nLengthTithes = nCountTithes;
 	bOut[1] = (BYTE)nTithes;
-
 }
 class CAboutDlg : public CDialogEx, public CSerialIO
 {
@@ -284,6 +302,10 @@ BEGIN_MESSAGE_MAP(CMFCDemoDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_SEND, &CMFCDemoDlg::OnBnClickedButtonSend)
 	ON_BN_CLICKED(IDC_BUTTON_TUNING, &CMFCDemoDlg::OnBnClickedButtonTuning)
 	ON_BN_CLICKED(IDC_BUTTON_REQUEST_PID, &CMFCDemoDlg::OnBnClickedButtonRequestPid)
+	ON_BN_CLICKED(IDC_BUTTON_DRAW, &CMFCDemoDlg::OnBnClickedButtonDraw)
+	ON_BN_CLICKED(IDC_BUTTON_SENDPOS, &CMFCDemoDlg::OnBnClickedButtonSendpos)
+	ON_BN_CLICKED(IDC_BUTTON_OPRUN, &CMFCDemoDlg::OnBnClickedButtonOprun)
+	ON_BN_CLICKED(IDC_BUTTON_GET_RMS, &CMFCDemoDlg::OnBnClickedButtonGetRms)
 END_MESSAGE_MAP()
 
 
@@ -324,11 +346,6 @@ BOOL CMFCDemoDlg::OnInitDialog()
 	m_ccbBaudrate.InsertString(3, (CString)"115200");
 	m_ccbBaudrate.SetCurSel(3);
 
-	return TRUE;  // return TRUE  unless you set the focus to a control
-	//
-	//
-	//
-
 	for (int i = 0; i < 1000; i++)
 	{
 		if (i == 0)
@@ -340,7 +357,7 @@ BOOL CMFCDemoDlg::OnInitDialog()
 
 	CChartCtrl ref;
 	ref.RemoveAllSeries();
-	pChartCtrlPID.EnableRefresh(true);
+	pCharCtrlPID.EnableRefresh(true);
 	pBottomAxis = pCharCtrlPID.CreateStandardAxis(CChartCtrl::BottomAxis);
 	pLeftAxis = pCharCtrlPID.CreateStandardAxis(CChartCtrl::LeftAxis);
 	pBottomAxis->SetMinMax(0, 2);
@@ -355,8 +372,60 @@ BOOL CMFCDemoDlg::OnInitDialog()
 
 	pChartPIDSeries = pCharCtrlPID.CreateLineSerie();
 	pChartPIDSeries->ClearSerie();
-	pChartPIDSeries->SetWidth(5); //linewidth
-	pChartPIDSeries->SetColor(RGB(0, 0, 255));
+	pChartPIDSeries->SetWidth(5); //line width
+	pChartPIDSeries->SetColor(RGB(0, 0, 255)); //color of line
+
+
+	ref.RemoveAllSeries();
+	pChartCtrlPos.EnableRefresh(true);
+	pBottomAxis = pChartCtrlPos.CreateStandardAxis(CChartCtrl::BottomAxis);
+	pLeftAxis = pChartCtrlPos.CreateStandardAxis(CChartCtrl::LeftAxis);
+	pBottomAxis->SetMinMax(0, 5);
+	pLeftAxis->SetMinMax(0, 1000);
+	//pLeftAxis->GetLabel()->SetText("Intensity");
+	pBottomAxis->SetTickIncrement(true, 20.0);
+	pBottomAxis->SetDiscrete(false);
+	pBottomAxis->EnableScrollBar(false);
+	pChartPosSeries = pChartCtrlPos.CreateLineSerie();
+	pChartPosSeries->ClearSerie();
+	pChartPosSeries->SetWidth(5); //line width
+	pChartPosSeries->SetColor(RGB(0, 0, 255)); //color of line
+
+
+	ref.RemoveAllSeries();
+	pChartCtrlVel.EnableRefresh(true);
+	pBottomAxis = pChartCtrlVel.CreateStandardAxis(CChartCtrl::BottomAxis);
+	pLeftAxis = pChartCtrlVel.CreateStandardAxis(CChartCtrl::LeftAxis);
+	pBottomAxis->SetMinMax(0, 5);
+	pLeftAxis->SetMinMax(-500, 500);
+	//pLeftAxis->GetLabel()->SetText("Intensity");
+	pBottomAxis->SetTickIncrement(true, 20.0);
+	pBottomAxis->SetDiscrete(false);
+	pBottomAxis->EnableScrollBar(true);
+	pChartVelSeries = pChartCtrlVel.CreateLineSerie();
+	pChartVelSeries->ClearSerie();
+	pChartVelSeries->SetWidth(5); //line width
+	pChartVelSeries->SetColor(RGB(0, 0, 255)); //color of line
+
+	ref.RemoveAllSeries();
+	pChartCtrlAcc.EnableRefresh(true);
+	pBottomAxis = pChartCtrlAcc.CreateStandardAxis(CChartCtrl::BottomAxis);
+	pLeftAxis = pChartCtrlAcc.CreateStandardAxis(CChartCtrl::LeftAxis);
+	pBottomAxis->SetMinMax(0, 5);
+	pLeftAxis->SetMinMax(-600, 600);
+	//pLeftAxis->GetLabel()->SetText("Intensity");
+	pBottomAxis->SetTickIncrement(true, 20.0);
+	pBottomAxis->SetDiscrete(false);
+	pBottomAxis->EnableScrollBar(true);
+
+	pChartAccSeries = pChartCtrlAcc.CreateLineSerie();
+	pChartAccSeries->ClearSerie();
+	pChartAccSeries->SetWidth(5); //line width
+	pChartAccSeries->SetColor(RGB(0, 0, 255)); //color of line
+
+	//m_ChartCtrl./*EnableRefresh*/(true);
+	//
+	return TRUE; // return TRUE  unless you set the focus to a control
 
 
 }
@@ -475,6 +544,20 @@ void CMFCDemoDlg::OnBnClickedButtonOpen()
 */
 void CMFCDemoDlg::OnEventOpen(BOOL bSuccess)
 {
+	CString str;
+	if (bSuccess)
+	{
+		str = m_csPortName + static_cast<CString>(" open successfully");
+
+		bPortOpened = TRUE;
+		m_btnOpen.SetWindowText(static_cast<CString>("Close"));
+
+	}
+	else
+	{
+		str = m_csPortName + static_cast<CString>(" open failed");
+	}
+	m_staticInfo.SetWindowText(str);
 }
 
 /**
@@ -483,6 +566,19 @@ void CMFCDemoDlg::OnEventOpen(BOOL bSuccess)
 */
 void CMFCDemoDlg::OnEventClose(BOOL bSuccess)
 {
+	CString str;
+	if (bSuccess)
+	{
+		str = m_csPortName + static_cast<CString>("close successfully");
+		bPortOpened = FALSE;
+		m_btnOpen.SetWindowText(static_cast<CString>("Open"));
+
+	}
+	else
+	{
+		str = m_csPortName + static_cast<CString>(" close failed");
+	}
+	m_staticInfo.SetWindowText(str);
 }
 
 /**
@@ -779,24 +875,24 @@ void CMFCDemoDlg::OnBnClickedButtonSend()
 {
 	// TODO: Add your control notification handler code here
 	CString strData;
-	// DWORD dwRetCode;
+	//DWORD	dwRetCode;
 	memset(bDATA, '\0', 8);
 
-	double dKp = (double) GetDlgItemInt(IDC_EDIT_KP); // Nho xem lai doan nay
-	double dKi = (double) GetDlgItemInt(IDC_EDIT_KI);
-	double dKd = (double) GetDlgItemInt(IDC_EDIT_KD);
-	// TODO: Add your control handler code
-	BYTE bprotocol[50] = {};
+	double dKp = GetDlgItemDouble(IDC_EDIT_KP);
+	double dKi = GetDlgItemDouble(IDC_EDIT_KI);
+	double dKd = GetDlgItemDouble(IDC_EDIT_KD);
+	// TODO: Add your control notification handler code here
+	BYTE bProtocol[50] = {};
 	UINT index = 0;
 
 	uint8_t nLengTithes;
 	BYTE bKp[2], bKi[2], bKd[3];
-	
-	FloatToByteArray(static_cast<float>(dKp), bKp, &nLengTithes);
+
+	FloatToByteArray(dKp, bKp, &nLengTithes);
 	bDATA[0] = bKp[0];
 	bDATA[1] = bKp[1];
 
-	FloatToByteArray(static_cast<float>(dKi), bKi, &nLengTithes);
+	FloatToByteArray(dKi, bKi, &nLengTithes);
 	bDATA[2] = bKi[0];
 	bDATA[3] = bKi[1];
 
@@ -808,19 +904,32 @@ void CMFCDemoDlg::OnBnClickedButtonSend()
 
 	if (!GetPortActivateValue()) return;
 
-	memcpy(bprotocol + index, bSTX, sizeof(bSTX));
+
+	memcpy(bProtocol + index, bSTX, sizeof(bSTX));
 	index += sizeof(bSTX);
-	memcpy(bprotocol + index, bSPID, sizeof(bSPID));
+	memcpy(bProtocol + index, bSPID, sizeof(bSPID));
 	index += sizeof(bSPID);
-	memcpy(bprotocol + index, bOPT, sizeof(bOPT));
+	memcpy(bProtocol + index, bOPT, sizeof(bOPT));
 	index += sizeof(bOPT);
-	memcpy(bprotocol + index, bDATA, sizeof(bDATA));
+	memcpy(bProtocol + index, bDATA, sizeof(bDATA));
 	index += sizeof(bDATA);
-	memcpy(bprotocol + index, bSYNC, sizeof(bSYNC));
+	memcpy(bProtocol + index, bSYNC, sizeof(bSYNC));
 	index += sizeof(bSYNC);
-	memcpy(bprotocol + index, bETX, sizeof(bETX));
+	memcpy(bProtocol + index, bETX, sizeof(bETX));
 	index += sizeof(bETX);
-	Write((char*)bprotocol, index);
+	Write((char*)bProtocol, index);
+
+	//Show on text box
+	CString cmd;
+	cmd.Format(static_cast<CString>("CMD: "));
+	m_listboxRead.InsertString(0, cmd);
+	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
 }
 
 
@@ -852,6 +961,12 @@ void CMFCDemoDlg::OnBnClickedButtonTuning()
 	cmd.Format(static_cast<CString>("CMD: "));
 	m_listboxRead.InsertString(0, cmd);
 	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
 }
 
 
@@ -876,4 +991,205 @@ void CMFCDemoDlg::OnBnClickedButtonRequestPid()
 	memcpy(bProtocol + index, bETX, sizeof(bETX));
 	index += sizeof(bETX);
 	Write((char*)bProtocol, index);
+
+	//Show on text box
+	CString cmd;
+	cmd.Format(static_cast<CString>("CMD: "));
+	m_listboxRead.InsertString(0, cmd);
+	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
+}
+
+
+void CMFCDemoDlg::OnBnClickedButtonDraw()
+{
+	// TODO: Add your control notification handler code here
+	double dPosRef = GetDlgItemDouble(IDC_EDIT_POS_MAX); // Read from text box
+	double dVelMax = GetDlgItemDouble(IDC_EDIT_VELMAX);
+	double dAccMax = GetDlgItemDouble(IDC_EDIT_ACC_MAX);
+
+	MotionGenerator* trapezoidalProfile = new MotionGenerator(static_cast<float>(dVelMax), static_cast<float>(dAccMax),	0); //Generate Pro5 from parameters
+
+	float fCalPosition[200], fCalVel[200], fCalAcc[200];
+	// Retrieve calculated position
+	float positionRef = dPosRef;
+	double positionRefC[200];
+	//float position = trapezoidalProfile->update(positionRef);
+	//float velocity, acceleration;
+
+	double fTime[200];
+	for (int i = 0; i < 200; i++) {
+		positionRefC[i] = dPosRef;
+		if (i == 0) {
+			fTime[i] = 0.025;
+		}
+		else fTime[i] = fTime[i - 1] + 0.025;
+	}
+	for (int i = 0; i < 200; i++) {
+
+		fCalPosition[i] = trapezoidalProfile->update(positionRefC[i], fTime[i]);  // NOLINT(bug prone-narrowing-conversions)
+		// Check if profile is finished
+		fCalVel[i] = trapezoidalProfile->getVelocity();
+
+		//// Retrieve current acceleration
+		fCalAcc[i] = trapezoidalProfile->getAcceleration();
+
+
+		//// Retrieve current velocity
+
+	}
+	if (trapezoidalProfile->getFinished()) {};
+
+	// Reset internal state
+	trapezoidalProfile->reset();
+
+		// Plot data after calculation
+	pChartPosSeries->ClearSerie();
+	for (int i = 0; i < 200; i++) {
+		//pChartPosSeries->AddPoint(fTime[i], fCalPosition[i]);
+
+		pChartPosSeries->AddPoint(fTime[i], dPosRef);
+	}
+
+	pChartVelSeries->ClearSerie();
+	for (int i = 0; i < 200; i++) {
+		pChartVelSeries->AddPoint(fTime[i], fCalVel[i]);
+	}
+	pChartAccSeries->ClearSerie();
+	for (int i = 0; i < 200; i++) {
+		pChartAccSeries->AddPoint(fTime[i], fCalAcc[i]);
+	}
+
+}
+
+
+void CMFCDemoDlg::OnBnClickedButtonSendpos()
+{
+	// TODO: Add your control notification handler code here
+	BYTE bProtocol[50] = {};
+	UINT index = 0;
+	memset(bDATA, '\0', 8);
+
+	double dPosRef = GetDlgItemDouble(IDC_EDIT_POS_MAX);
+	double dVelMax = GetDlgItemDouble(IDC_EDIT_VELMAX);
+	double dAccMax = GetDlgItemDouble(IDC_EDIT_ACC_MAX);
+
+	//dPosRef = 
+	bDATA[2] = (static_cast<UINT16>(dAccMax) & 0xFF00) >> 8;
+	bDATA[3] = static_cast<UINT16>(dAccMax) & 0xFF;
+	bDATA[4] = (static_cast<UINT16>(dVelMax) & 0xFF00) >> 8;
+	bDATA[5] = static_cast<UINT16>(dVelMax) & 0xFF;
+	bDATA[6] = (static_cast<UINT16>(dPosRef) & 0xFF00) >> 8;
+	bDATA[7] = static_cast<UINT16>(dPosRef) & 0xFF;
+	if (!GetPortActivateValue()) return;
+
+
+	memcpy(bProtocol + index, bSTX, sizeof(bSTX));
+	index += sizeof(bSTX);
+	memcpy(bProtocol + index, bCSET, sizeof(bCSET));
+	index += sizeof(bCSET);
+	memcpy(bProtocol + index, bOPT, sizeof(bOPT));
+	index += sizeof(bOPT);
+	memcpy(bProtocol + index, bDATA, sizeof(bDATA));
+	index += sizeof(bDATA);
+	memcpy(bProtocol + index, bSYNC, sizeof(bSYNC));
+	index += sizeof(bSYNC);
+	memcpy(bProtocol + index, bETX, sizeof(bETX));
+	index += sizeof(bETX);
+	Write((char*)bProtocol, index);
+
+	//Show on text box
+	CString cmd;
+	cmd.Format(static_cast<CString>("CMD: "));
+	m_listboxRead.InsertString(0, cmd);
+	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
+}
+
+
+void CMFCDemoDlg::OnBnClickedButtonOprun()
+{
+	// TODO: Add your control notification handler code here
+	BYTE bProtocol[50] = {};
+	UINT index = 0;
+
+	memset(bDATA, '\0', 8);
+	// TODO: Add your control notification handler code here
+	if (!GetPortActivateValue()) return;
+
+
+	memcpy(bProtocol + index, bSTX, sizeof(bSTX));
+	index += sizeof(bSTX);
+	memcpy(bProtocol + index, bCRUN, sizeof(bCRUN));
+	index += sizeof(bCRUN);
+	memcpy(bProtocol + index, bOPT, sizeof(bOPT));
+	index += sizeof(bOPT);
+	memcpy(bProtocol + index, bDATA, sizeof(bDATA));
+	index += sizeof(bDATA);
+	memcpy(bProtocol + index, bSYNC, sizeof(bSYNC));
+	index += sizeof(bSYNC);
+	memcpy(bProtocol + index, bETX, sizeof(bETX));
+	index += sizeof(bETX);
+	Write((char*)bProtocol, index);
+
+	//Show on text box
+	CString cmd;
+	cmd.Format(static_cast<CString>("CMD: "));
+	m_listboxRead.InsertString(0, cmd);
+	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
+
+}
+
+
+
+void CMFCDemoDlg::OnBnClickedButtonGetRms()
+{
+	// TODO: Add your control notification handler code here
+	BYTE bProtocol[50] = {};
+	UINT index = 0;
+	memset(bDATA, '\0', 8);
+	// TODO: Add your control notification handler code here
+	if (!GetPortActivateValue()) return;
+
+
+	memcpy(bProtocol + index, bSTX, sizeof(bSTX));
+	index += sizeof(bSTX);
+	memcpy(bProtocol + index, bGRMS, sizeof(bGRMS));
+	index += sizeof(bGRMS);
+	memcpy(bProtocol + index, bOPT, sizeof(bOPT));
+	index += sizeof(bOPT);
+	memcpy(bProtocol + index, bDATA, sizeof(bDATA));
+	index += sizeof(bDATA);
+	memcpy(bProtocol + index, bSYNC, sizeof(bSYNC));
+	index += sizeof(bSYNC);
+	memcpy(bProtocol + index, bETX, sizeof(bETX));
+	index += sizeof(bETX);
+	Write((char*)bProtocol, index);
+
+	CString cmd;
+	cmd.Format(static_cast<CString>("CMD: "));
+	m_listboxRead.InsertString(0, cmd);
+	cmd.Empty();
+	for (UINT i = 0; i < index; i++) {
+
+		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
+
+	}
+	m_listboxRead.InsertString(0, cmd);
 }

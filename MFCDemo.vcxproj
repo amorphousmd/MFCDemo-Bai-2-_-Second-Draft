@@ -218,6 +218,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="MFCDemo.h" />
     <ClInclude Include="MFCDemoDlg.h" />
+    <ClInclude Include="Motion\MotionGenerator.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SerialCtrl.h" />
@@ -250,6 +251,7 @@
     <ClCompile Include="ChartCtrl\ChartXYSerie.cpp" />
     <ClCompile Include="MFCDemo.cpp" />
     <ClCompile Include="MFCDemoDlg.cpp" />
+    <ClCompile Include="Motion\MotionGenerator.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="SerialCtrl.cpp" />
     <ClCompile Include="stdafx.cpp">
