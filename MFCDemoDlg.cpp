@@ -569,7 +569,7 @@ void CMFCDemoDlg::OnEventClose(BOOL bSuccess)
 	CString str;
 	if (bSuccess)
 	{
-		str = m_csPortName + static_cast<CString>("close successfully");
+		str = m_csPortName + static_cast<CString>(" close successfully");
 		bPortOpened = FALSE;
 		m_btnOpen.SetWindowText(static_cast<CString>("Open"));
 
@@ -997,12 +997,6 @@ void CMFCDemoDlg::OnBnClickedButtonRequestPid()
 	cmd.Format(static_cast<CString>("CMD: "));
 	m_listboxRead.InsertString(0, cmd);
 	cmd.Empty();
-	for (UINT i = 0; i < index; i++) {
-
-		cmd.AppendFormat(static_cast<CString>("%02X "), bProtocol[i]);
-
-	}
-	m_listboxRead.InsertString(0, cmd);
 }
 
 

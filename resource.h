@@ -48,8 +48,8 @@
 #define IDC_STATIC_INFO2                1040
 #define IDC_EDIT_POS_MAX                1041
 #define IDC_EDIT_VELMAX                 1042
-#define IDC_EDIT5                       1043
 #define IDC_EDIT_ACC_MAX                1043
+#define IDC_CHARTCTRL_TUNNING2          1045
 
 // Next default values for new objects
 // 
